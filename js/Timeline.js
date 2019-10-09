@@ -14,6 +14,10 @@ let x = d3.scaleTime(),
   area = d3.area(),
   brush = d3.brushX();
   // Activity III  create a new dispatch with a custom event 
+  let listeners = d3.dispatch('brushed'); // 'brushed' is the name of our custom event
+
+  
+
 
 function chart(selection){
   selection.each(function(data){
@@ -60,9 +64,12 @@ function chart(selection){
       .attr("d", area);
 
     // Activity III - Set the brush extent, brush event listener, and render the brush
-  
+    brush.extent([[0, 0], [innerWidth, innerHeight]])
+          .on("brush", handleBrush);
 
-    // Append x-axis
+    g.select('.brush').call(brush);
+
+    
     g.select('.x-axis')
       .attr("transform", "translate(0," + innerHeight + ")")
       .call(xAxis);
@@ -72,10 +79,16 @@ function chart(selection){
 
 // Activity III  define 'on' function to enable external modules to register callbacks for the custom event
   // allow users to register for your custom events 
+  chart.on = function() {// allow users to register for your custom events 
+    var value = listeners.on.apply(listeners, arguments);
+    return value === listeners ? chart : value;
+  };
 
 function handleBrush(){
   // Activity III  - call registered callbacks and send the brush filter information
+  listeners.apply('brushed', this, [d3.event.selection.map(x.invert), d3.event.selection]); 
 }
+
 
 return chart;
 

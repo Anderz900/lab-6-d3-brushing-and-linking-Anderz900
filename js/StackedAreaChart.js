@@ -1,6 +1,6 @@
 
 // Activity IV - Import tooltip text abbreviation method
-
+import excerpt from './excerpt.js';
 export default function StackedAreaChart(){ // does not need to have a name
 	// init size
 	let margin ={
@@ -20,6 +20,8 @@ export default function StackedAreaChart(){ // does not need to have a name
 	let xAxis = d3.axisBottom().scale(x);
 	// Activity V - Create a dispatch for the category selection
 
+
+	let listeners = d3.dispatch('selectCategory');
 	let stack, stackedData, area, tooltip;
 	
 	// define reusable chart update function
@@ -34,6 +36,9 @@ export default function StackedAreaChart(){ // does not need to have a name
 
 			
 			let svgEnter = svg.enter().append('svg');
+			svg = svg.merge(svgEnter);
+
+
 			let gEnter = svgEnter.append('g');
 			
 			gEnter.append("g")
@@ -41,22 +46,86 @@ export default function StackedAreaChart(){ // does not need to have a name
 					
 			gEnter.append("g")
 				.attr("class", "y-axis axis");
+
 			
 			// Activity IV - Add a tooltip placeholder
+
+			gEnter.append("text") // use gEnter to create this only once!
+			.attr("class", "focus")
+			.attr("x", 20)
+			.attr("y", 0)
+			.attr("dy", ".35em");
 
 			// ------------------------------------------------
 			
 			// Activity II - Create a stacked area chart
+			svg.attr("width", width)
+         		.attr("height", height);
+        
+ 			let g = svg.select("g")
+						 .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+			tooltip = g.select('.focus');
+		
 			
+			let dataCategories = data.length>0?Object.keys(data[0]).filter(d=>d!=="Year"):[];
+			console.log(dataCategories);
+
+			// console.log(dataCategories[0]);
+				// Initialize stack layout
+			stack = d3.stack()
+					.keys(dataCategories);
+								
+				// Stack data
+			stackedData = stack(data);
+
+			x.range([0, width - margin.left - margin.right])
+ 				.domain(d3.extent(data, d=>d.Year));
+    
+ 			y.range([height - margin.top - margin.bottom, 0])
+ 			 	.domain([0,d3.max(stackedData, d => d3.max(d, d => d[1]))]);
+    
+			color.domain(dataCategories);
+			console.log(color);
+
+			area = d3.area()
+				.curve(d3.curveCardinal)
+		   		.x(d=>x(d.data.Year))
+				.y0(d=>y(d[0]))
+				.y1(d=>y(d[1]));
+
+ 			let categories = g.selectAll(".area")
+							   .data(stackedData);
+							   
+			
+
+
+			categories.enter().append("path")
+ 								.attr("class", "area")
+ 								.merge(categories)
+								 .style("fill", (d,i)=>color(dataCategories[i])) // assign color
+								 .attr("d", d=>area(d))
+								 .on("mouseover", (d,i)=>tooltip.text(excerpt(dataCategories[i], 100)))
+								.on("mouseout", d=>tooltip.text(""))
+								.on("click", handleClick); 
+				
+
+			
+
+			g.select(".x-axis")
+				.attr("transform", "translate(0," + (height-margin.top-margin.bottom) + ")")
+				.call(xAxis);
+				
+
+			g.select(".y-axis")
+				.call(yAxis);
 			// Activity V - add a click listener for area layers
 
-			// Activity IV - Add tooltip events on the area paths
 		
 			categories.exit().remove();
 			
 			// Call axis functions with the new domain 
-			g.select(".x-axis").call(xAxis);
-			g.select(".y-axis").call(yAxis);
+			
 			
 		});
 	}
@@ -74,9 +143,14 @@ export default function StackedAreaChart(){ // does not need to have a name
 
 	// Activity V - allow users to register for your custom events 
 
+	chart.on = function() {
+		var value = listeners.on.apply(listeners, arguments);
+		return value === listeners ? chart : value;
+	};
 	function handleClick(d,i){
-		// Activity V - call registered callbacks and pass the category info
+		listeners.apply("selectCategory", this, [d.key,d.index]);
 	}
 	return chart;
 	
 }
+
